@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ]]
 
 -- Adapted to WildStar Packaging format by Sinaloit
-local MAJOR, MINOR = "Gemini:LibError-1.0", 1
+local MAJOR, MINOR = "Gemini:LibError-1.0", 2
 -- Get a reference to the package information if any
 local APkg = Apollo.GetPackage(MAJOR)
 -- If there was an older version loaded we need to see if this is newer
@@ -47,8 +47,6 @@ local tostring, tonumber, GetTime =
       tostring, tonumber, os.clock
 -- GLOBALS: date
 
-local bFullyLoaded = nil
-local errorQueue = nil
 -----------------------------------------------------------------------
 -- Config variables
 --
@@ -65,37 +63,11 @@ local displayObjectName = nil
 -- Shorthand to LibErrorDB.errors
 local db = nil
 
--- Errors we catch during the addon loading process, before our saved
--- variables are available. After the SVs have loaded, these will be
--- inserted into the proper DB.
-local loadErrors = {}
-
+-- Errors we catch during the addon loading process, before we can
+-- directly display errors.
+local errorQueue = {}
+local bFullyLoaded = nil
 local paused = nil
-local isErrGrabbedRegistered = nil
-local callbacks = nil
-
------------------------------------------------------------------------
--- Callbacks
---
-
-local function setupCallbacks()
-	if not callbacks and Apollo.GetPackage("Gemini:CallbackHandler-1.0") and Apollo.GetPackage("Gemini:CallbackHandler-1.0").tPackage then
-		callbacks = Apollo.GetPackage("Gemini:CallbackHandler-1.0").tPackage:New(LibError)
-		function callbacks:OnUsed(target, eventname)
-			if eventname == "LibError_ErrGrabbed" then isErrGrabbedRegistered = true end
-		end
-		function callbacks:OnUnused(target, eventname)
-			if eventname == "LibError_ErrGrabbed" then isErrGrabbedRegistered = nil end
-		end
-		setupCallbacks = nil
-	end
-end
-LibError.setupCallbacks = setupCallbacks; -- make it accessible from the outside for add-ons relying on LibError events so they can make LibError.RegisterCallback appear when they need it (CallbackHandler-1.0 is not embedded in LibError)
-
-local function triggerEvent(...)
-	if not callbacks then setupCallbacks() end
-	if callbacks then callbacks:Fire(...) end
-end
 
 -----------------------------------------------------------------------
 -- Localization
@@ -147,6 +119,27 @@ local function debugLocals(nLevel)
 	return tVars
 end
 
+function OnError(tErrorObject)
+	local tAddon, tADI = Apollo.GetAddon(tErrorObject.strName), nil
+	if tAddon ~= nil then
+		tADI = Apollo.GetAddonInfo(tErrorObject.strName)
+		Apollo.AddAddonErrorText(tAddon, tErrorObject.message .. "\n" .. tErrorObject.stack)
+	else
+		tADI = {
+			strName = tErrorObject.strName,
+			strAuthor = "Unknown",
+			arErrors = {tErrorObject.message},
+		}
+	end
+	if not bFullyLoaded then
+		errorQueue = errorQueue or {}
+		tADI.strError = tErrorObject.message
+		table.insert(errorQueue, tADI)
+	else
+		Event_FireGenericEvent("LuaError", tAddonInfo, tErrorObject.message, true)
+	end
+end
+
 -- Error handler
 local grabError
 do
@@ -195,19 +188,13 @@ do
 				stack = strStack,
 				locals = tLocals,
 				strName = tLocals.self and tostring(tLocals.self) or "Unknown",
-				--session = LibError:GetSessionId(),
 				time = os.date("%Y/%m/%d %H:%M:%S"),
 				counter = 1,
 			}
 
-			--wipe(tmp)
 		end
---[[
-		if not isErrGrabbedRegistered then
-			Print(L.ERROR_DETECTED:format(LibError:GetChatLink(errorObject)))
-		end
---]]
-		triggerEvent("LibError_ErrGrabbed", errorObject)
+
+		OnError(errorObject)
 	end
 end
 LibError.Error = grabError
@@ -235,38 +222,10 @@ function LibError:OnLoad()
 		end
 		LibError.LoadTranslations = nil
 	end
-	setupCallbacks()
-	if LibError.RegisterCallback then
-		LibError.RegisterCallback(self, "LibError_ErrGrabbed", OnError)
-		for k,v in next, loadErrors do
-			OnDefaultError("LibError_ErrGrabbed", v)
-		end
-	end
 end
 -- No dependencies
 function LibError:OnDependencyError(strDep, strError)
 	return false
-end
-
-function OnError(strEvent, tErrorObject)
-	local tAddon, tADI = Apollo.GetAddon(tErrorObject.strName), nil
-	if tAddon ~= nil then
-		tADI = Apollo.GetAddonInfo(tErrorObject.strName)
-		Apollo.AddAddonErrorText(tAddon, tErrorObject.message .. "\n" .. tErrorObject.stack)
-	else
-		tADI = {
-			strName = tErrorObject.strName,
-			strAuthor = "Unknown",
-			arErrors = {tErrorObject.message},
-		}
-	end
-	if not bFullyLoaded then
-		errorQueue = errorQueue or {}
-		tADI.strError = tErrorObject.message
-		table.insert(errorQueue, tADI)
-	else
-		Event_FireGenericEvent("LuaError", tAddonInfo, tErrorObject.message, true)
-	end
 end
 
 function LibError:LoadTranslations(locale, L)
@@ -302,4 +261,4 @@ L["LIBERROR_STOPPED"] = "LibErrorr ha smesso di catturare errori, poichè ha cat
 	end
 end
 
-Apollo.RegisterPackage(LibError, MAJOR, MINOR, {"Gemini:CallbackHandler-1.0"})
+Apollo.RegisterPackage(LibError, MAJOR, MINOR, {})
