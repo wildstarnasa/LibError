@@ -194,7 +194,7 @@ do
 				message = errorMessage,
 				stack = strStack,
 				locals = tLocals,
-				strName = tostring(tLocals.self) or "Unknown",
+				strName = tLocals.self and tostring(tLocals.self) or "Unknown",
 				--session = LibError:GetSessionId(),
 				time = os.date("%Y/%m/%d %H:%M:%S"),
 				counter = 1,
