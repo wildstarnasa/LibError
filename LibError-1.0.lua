@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ]]
 
 -- Adapted to WildStar Packaging format by Sinaloit
-local MAJOR, MINOR = "Gemini:LibError-1.0", 3
+local MAJOR, MINOR = "Gemini:LibError-1.0", 4
 -- Get a reference to the package information if any
 local APkg = Apollo.GetPackage(MAJOR)
 -- If there was an older version loaded we need to see if this is newer
@@ -203,7 +203,7 @@ LibError.Error = grabError
 function LibError:IsPaused() return paused end
 
 function LibError:OnFullyLoaded()
-	local bFullyLoaded = true
+	bFullyLoaded = true
 	if type(errorQueue) ~= "table" then
 		return
 	end
