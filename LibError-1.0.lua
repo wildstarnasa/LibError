@@ -26,11 +26,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ]]
 
 -- Adapted to WildStar Packaging format by Sinaloit
-local MAJOR, MINOR = "Gemini:LibError-1.0", 2
+local MAJOR, MINOR = "Gemini:LibError-1.0", 3
 -- Get a reference to the package information if any
 local APkg = Apollo.GetPackage(MAJOR)
 -- If there was an older version loaded we need to see if this is newer
-if APkg and (APkg.nVersion > 0)  then
+if APkg and (APkg.nVersion > 0) then
 	return -- no upgrades
 end
 -- Set a reference to the actual package or create an empty table
@@ -104,6 +104,28 @@ end
 -----------------------------------------------------------------------
 -- Utility
 --
+function OnError(tErrorObject)
+	local tAddon, tADI = Apollo.GetAddon(tErrorObject.strName), nil
+	local strError = tErrorObject.message
+	if tAddon ~= nil then
+		tADI = Apollo.GetAddonInfo(tErrorObject.strName)
+		Apollo.AddAddonErrorText(tAddon, tErrorObject.message .. "\n" .. tErrorObject.stack)
+	else
+		tADI = {
+			strName = tErrorObject.strName,
+			strAuthor = "Unknown",
+			arErrors = {tErrorObject.message},
+		}
+		strError = tErrorObject.message .. "\n" .. tErrorObject.stack
+	end
+	if not bFullyLoaded then
+		errorQueue = errorQueue or {}
+		tADI.strError = strError
+		table.insert(errorQueue, tADI)
+	else
+		Event_FireGenericEvent("LuaError", tAddonInfo, strError, true)
+	end
+end
 
 local function debugLocals(nLevel)
 	local tVars, nIdx = {}, 1
@@ -117,27 +139,6 @@ local function debugLocals(nLevel)
 		nIdx = nIdx + 1
 	end
 	return tVars
-end
-
-function OnError(tErrorObject)
-	local tAddon, tADI = Apollo.GetAddon(tErrorObject.strName), nil
-	if tAddon ~= nil then
-		tADI = Apollo.GetAddonInfo(tErrorObject.strName)
-		Apollo.AddAddonErrorText(tAddon, tErrorObject.message .. "\n" .. tErrorObject.stack)
-	else
-		tADI = {
-			strName = tErrorObject.strName,
-			strAuthor = "Unknown",
-			arErrors = {tErrorObject.message},
-		}
-	end
-	if not bFullyLoaded then
-		errorQueue = errorQueue or {}
-		tADI.strError = tErrorObject.message
-		table.insert(errorQueue, tADI)
-	else
-		Event_FireGenericEvent("LuaError", tAddonInfo, tErrorObject.message, true)
-	end
 end
 
 -- Error handler
@@ -233,25 +234,25 @@ function LibError:LoadTranslations(locale, L)
 L["LIBERROR_STOPPED"] = "이것은 초당 %d개 이상의 오류를 발견하였기에 |cffffff7fLibError|r의 오류 캡쳐가 중지되었으며, 캡쳐는 %d초 후 재개됩니다." -- Needs review
 
 	elseif locale == "deDE" then
-L["LIBERROR_STOPPED"] = "In deinem UI treten zu viele Fehler auf, als Folge davon könnte dein Spiel langsamer laufen. Deaktiviere oder aktualisiere die fehlerhaften Addons, wenn du diese Meldung nicht mehr sehen willst.|r"
+L["LIBERROR_STOPPED"] = "In deinem UI treten zu viele Fehler auf, als Folge davon könnte dein Spiel langsamer laufen. Deaktiviere oder aktualisiere die fehlerhaften Addons, wenn du diese Meldung nicht mehr sehen willst."
 
 	elseif locale == "esES" then
-L["LIBERROR_STOPPED"] = "¡Hay demasiados errores en la interfaz! Esto puede afectar negativamente el rendimiento del juego. Desactivar o actualizar los addons que están causando los errores si no deseas ver este mensaje nunca más.|r"
+L["LIBERROR_STOPPED"] = "¡Hay demasiados errores en la interfaz! Esto puede afectar negativamente el rendimiento del juego. Desactivar o actualizar los addons que están causando los errores si no deseas ver este mensaje nunca más."
 
 	elseif locale == "zhTW" then
-L["LIBERROR_STOPPED"] = "你的UI有太多的錯誤。這可能導致糟糕的遊戲體驗。禁用或是更新錯誤的插件如果你不想看到再次看到這個訊息。|r"
+L["LIBERROR_STOPPED"] = "你的UI有太多的錯誤。這可能導致糟糕的遊戲體驗。禁用或是更新錯誤的插件如果你不想看到再次看到這個訊息。"
 
 	elseif locale == "zhCN" then
-L["LIBERROR_STOPPED"] = "用户界面有太多的错误。所以，游戏体验会被降低。如不想再看到此信息请禁用或升级失效插件。|r"
+L["LIBERROR_STOPPED"] = "用户界面有太多的错误。所以，游戏体验会被降低。如不想再看到此信息请禁用或升级失效插件。"
 
 	elseif locale == "ruRU" then
-L["LIBERROR_STOPPED"] = "|cffffff7fLibError|r прекратил захватывать ошибки, так как захватил более %d ошибок  в секунду. Захват возобновится через %d секунд." -- Needs review
+L["LIBERROR_STOPPED"] = "LibError прекратил захватывать ошибки, так как захватил более %d ошибок  в секунду. Захват возобновится через %d секунд." -- Needs review
 
 	elseif locale == "frFR" then
 L["LIBERROR_STOPPED"] = "LibError a cessé de capturer des erreurs, car plus de %d erreurs ont été capturées par seconde. La capture sera reprise dans %d secondes." -- Needs review
 
 	elseif locale == "esMX" then
-L["LIBERROR_STOPPED"] = "¡Hay demasiados errores en la interfaz! Esto puede afectar negativamente el rendimiento del juego. Desactivar o actualizar los addons que están causando los errores si no deseas ver este mensaje nunca más.|r"
+L["LIBERROR_STOPPED"] = "¡Hay demasiados errores en la interfaz! Esto puede afectar negativamente el rendimiento del juego. Desactivar o actualizar los addons que están causando los errores si no deseas ver este mensaje nunca más."
 
 	elseif locale == "ptBR" then
 L["LIBERROR_STOPPED"] = "LibError|r parou de capturar erros, já que capturou mais de %d erros por segundo. A captura será resumida em %d segundos." -- Needs review
