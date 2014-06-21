@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ]]
 
 -- Adapted to WildStar Packaging format by Sinaloit
-local MAJOR, MINOR = "Gemini:LibError-1.0", 4
+local MAJOR, MINOR = "Gemini:LibError-1.0", 5
 -- Get a reference to the package information if any
 local APkg = Apollo.GetPackage(MAJOR)
 -- If there was an older version loaded we need to see if this is newer
@@ -123,7 +123,7 @@ function OnError(tErrorObject)
 		tADI.strError = strError
 		table.insert(errorQueue, tADI)
 	else
-		Event_FireGenericEvent("LuaError", tAddonInfo, strError, true)
+		Event_FireGenericEvent("LuaError", tADI, strError, true)
 	end
 end
 
