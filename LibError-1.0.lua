@@ -59,15 +59,15 @@ local LIBERROR_ERRORS_PER_SEC_BEFORE_THROTTLE = 10
 -----------------------------------------------------------------------
 -- Locals
 --
-local displayObjectName = nil
+local displayObjectName
 -- Shorthand to LibErrorDB.errors
-local db = nil
+local db
 
 -- Errors we catch during the addon loading process, before we can
 -- directly display errors.
 local errorQueue = {}
-local bFullyLoaded = nil
-local paused = nil
+local bFullyLoaded
+local paused
 
 -----------------------------------------------------------------------
 -- Localization
